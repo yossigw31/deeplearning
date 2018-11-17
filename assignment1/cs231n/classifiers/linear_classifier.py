@@ -39,6 +39,7 @@ class LinearClassifier(object):
 
     # Run stochastic gradient descent to optimize W
     loss_history = []
+    vt = np.zeros_like(self.W)
     for it in xrange(num_iters):
       X_batch = None
       y_batch = None
@@ -68,15 +69,17 @@ class LinearClassifier(object):
       #########################################################################
 
       # evaluate loss and gradient
-      loss, grad = self.loss(X_batch, y_batch, reg)
+     
+      wlook_ahead = self.W - 0.9 * vt
+      loss, grad = self.loss(wlook_ahead ,X_batch, y_batch, reg)
       loss_history.append(loss)
-
+      vt = 0.9 * vt + learning_rate * grad
+      self.W = self.W - vt
       # perform parameter update
       #########################################################################
       # TODO:                                                                 #
       # Update the weights using the gradient and the learning rate.          #
       #########################################################################
-      self.W += - grad * learning_rate
       #########################################################################
       #                       END OF YOUR CODE                                #
       #########################################################################
@@ -110,7 +113,7 @@ class LinearClassifier(object):
     
     scores = np.dot(X,self.W)
     y_pred = np.argmax(scores,axis=1)
-	
+
     """a = X[3].dot(self.W)
     print(a.shape)
     print(a)
@@ -146,13 +149,13 @@ class LinearClassifier(object):
 class LinearSVM(LinearClassifier):
   """ A subclass that uses the Multiclass SVM loss function """
 
-  def loss(self, X_batch, y_batch, reg):
-    return svm_loss_vectorized(self.W, X_batch, y_batch, reg)
+  def loss(self,look_ahead_grad, X_batch, y_batch, reg):
+    return svm_loss_vectorized(look_ahead_grad, X_batch, y_batch, reg)
 
 
 class Softmax(LinearClassifier):
   """ A subclass that uses the Softmax + Cross-entropy loss function """
 
-  def loss(self, X_batch, y_batch, reg):
-    return softmax_loss_vectorized(self.W, X_batch, y_batch, reg)
+  def loss(self,look_ahead_grad, X_batch, y_batch, reg):
+    return softmax_loss_vectorized(look_ahead_grad, X_batch, y_batch, reg)
 
