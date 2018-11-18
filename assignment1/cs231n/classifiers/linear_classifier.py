@@ -39,7 +39,7 @@ class LinearClassifier(object):
 
     # Run stochastic gradient descent to optimize W
     loss_history = []
-    print(self.W)
+    
     vt = np.zeros_like(self.W)
     for it in xrange(num_iters):
       X_batch = None
@@ -113,15 +113,6 @@ class LinearClassifier(object):
     
     scores = np.dot(X,self.W)
     y_pred = np.argmax(scores,axis=1)
-	
-    """a = X[3].dot(self.W)
-    print(a.shape)
-    print(a)
-    pred = np.argmax(a)
-    print(pred)
-    for i in xrange(num_train):
-        scores = X[i].dot(self.W)
-        y_pred[i] = np.argmax(scores)"""
     
     ###########################################################################
     #                           END OF YOUR CODE                              #
