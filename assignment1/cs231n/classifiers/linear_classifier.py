@@ -39,7 +39,7 @@ class LinearClassifier(object):
 
     # Run stochastic gradient descent to optimize W
     loss_history = []
-    print(self.W)
+    
     vt = np.zeros_like(self.W)
     for it in xrange(num_iters):
       X_batch = None
