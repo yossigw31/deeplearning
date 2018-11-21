@@ -1,3 +1,5 @@
+#Yossi Gueta 032528267
+#Yotam Boaz 201585916
 from __future__ import print_function
 
 import numpy as np

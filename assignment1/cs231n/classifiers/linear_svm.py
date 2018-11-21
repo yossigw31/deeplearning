@@ -1,3 +1,5 @@
+#Yossi Gueta 032528267
+#Yotam Boaz 201585916
 import numpy as np
 from random import shuffle
 from past.builtins import xrange
