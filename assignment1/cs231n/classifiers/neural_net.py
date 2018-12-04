@@ -68,7 +68,8 @@ class TwoLayerNet(object):
     W1, b1 = self.params['W1'], self.params['b1']
     W2, b2 = self.params['W2'], self.params['b2']
     N, D = X.shape
-
+    b1= b1[:,np.newaxis]
+    b2= b2[:,np.newaxis]
     # Compute the forward pass
     scores = None
     #############################################################################
@@ -76,7 +77,9 @@ class TwoLayerNet(object):
     # Store the result in the scores variable, which should be an array of      #
     # shape (N, C).                                                             #
     #############################################################################
-    pass
+    nuronMatrix = np.dot(X, W1) + b1.T
+    hidden_layer = np.maximum(0, nuronMatrix) # note, ReLU activation
+    scores = np.dot(hidden_layer, W2) + b2.T
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -86,26 +89,58 @@ class TwoLayerNet(object):
       return scores
 
     # Compute the loss
-    loss = None
+    # hidden_layer = a
+   
+    #softmax
+    exp_scores = np.exp(scores)
+    probs = exp_scores / np.sum(exp_scores, axis=1, keepdims=True) # [N x K]
+    # compute the loss: average cross-entropy loss and regularization
+    correct_logprobs = -np.log(probs[range(N),y])
+    data_loss = np.sum(correct_logprobs)/N
+    reg_loss = reg*np.sum(W1*W1) + reg*np.sum(W2*W2)
+    loss = data_loss + reg_loss
+    
+    dscores = probs
+    dscores[range(N),y] -= 1
+    dscores /= N
+    
+    dW2 = np.dot(hidden_layer.T, dscores)
+    db2 = np.sum(dscores, axis=0, keepdims=True)
+    # next backprop into hidden layer = da
+    dhidden = np.dot(dscores, W2.T)
+    dhidden[hidden_layer <= 0] = 0
+    
+    dW1 = np.dot(X.T, dhidden)
+    db1 = np.sum(dhidden, axis=0, keepdims=True)
+    
+    # add regularization gradient contribution
+    dW2 += reg * W2*2
+    dW1 += reg * W1*2
+    
+   
+    
     #############################################################################
     # TODO: Finish the forward pass, and compute the loss. This should include  #
     # both the data loss and L2 regularization for W1 and W2. Store the result  #
     # in the variable loss, which should be a scalar. Use the Softmax           #
     # classifier loss.                                                          #
     #############################################################################
-    pass
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
 
     # Backward pass: compute gradients
     grads = {}
+    grads['W2'] = dW2
+    grads['b2'] = db2
+    grads['W1'] = dW1
+    grads['b1'] = db1
     #############################################################################
     # TODO: Compute the backward pass, computing the derivatives of the weights #
     # and biases. Store the results in the grads dictionary. For example,       #
     # grads['W1'] should store the gradient on W1, and be a matrix of same size #
     #############################################################################
-    pass
+    
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
