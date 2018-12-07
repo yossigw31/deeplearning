@@ -181,9 +181,9 @@ class TwoLayerNet(object):
         # TODO: Create a random minibatch of training data and labels, storing  #
         # them in X_batch and y_batch respectively.                             #
         #########################################################################
-        X_indices = np.random.choice(num_train, batch_size, replace=False)
-        X_batch = np.take(X, X_indices, axis=0)
-        y_batch = np.take(y, X_indices, axis=0)
+        batch_idxes = np.random.choice(num_train, batch_size, replace=False)
+        X_batch = X[batch_idxes, :]
+        y_batch = y[batch_idxes]
         #########################################################################
         #                             END OF YOUR CODE                          #
         #########################################################################
@@ -198,10 +198,12 @@ class TwoLayerNet(object):
         # using stochastic gradient descent. You'll need to use the gradients   #
         # stored in the grads dictionary defined above.                         #
         #########################################################################
+        b1 = grads['b1'].flatten()
+        b2 = grads['b2'].flatten()
         self.params['W1'] -= learning_rate * grads['W1']        
-        self.params['b1'] -= learning_rate * self.params['b1']
+        self.params['b1'] -= learning_rate * b1
         self.params['W2'] -= learning_rate * grads['W2']        
-        self.params['b2'] -= learning_rate * self.params['b2']
+        self.params['b2'] -= learning_rate * b2
         #########################################################################
         #                             END OF YOUR CODE                          #
         #########################################################################
