@@ -38,7 +38,13 @@ class TwoLayerNet(object):
         """
         self.params = {}
         self.reg = reg
-
+        self.D = input_dim
+        self.M = hidden_dim
+        self.C = num_classes
+        self.params['W1'] = weight_scale * np.random.randn(input_dim, hidden_dim)
+        self.params['b1'] = np.zeros(hidden_dim)
+        self.params['W2'] = weight_scale * np.random.randn(hidden_dim, num_classes)
+        self.params['b2'] = np.zeros(num_classes)
         ############################################################################
         # TODO: Initialize the weights and biases of the two-layer net. Weights    #
         # should be initialized from a Gaussian with standard deviation equal to   #
@@ -73,6 +79,11 @@ class TwoLayerNet(object):
           names to gradients of the loss with respect to those parameters.
         """
         scores = None
+        W1, b1 = self.params['W1'], self.params['b1']
+        W2, b2 = self.params['W2'], self.params['b2']
+        X = X.reshape(X.shape[0], self.D)
+        a, a_cache = affine_relu_forward(X,W1,b1)
+        scores, cache_scores  = affine_relu_forward(a,W2,b2)
         ############################################################################
         # TODO: Implement the forward pass for the two-layer net, computing the    #
         # class scores for X and storing them in the scores variable.              #
@@ -87,6 +98,22 @@ class TwoLayerNet(object):
             return scores
 
         loss, grads = 0, {}
+        
+        data_loss ,dscore = softmax_loss(scores,y)
+        reg_loss = self.reg*np.sum(W1*W1) + self.reg*np.sum(W2*W2)
+        loss = data_loss + reg_loss
+        
+        da, dW2, db2 = affine_relu_backward(dscore,cache_scores)
+        #adding w2 regularization derivative
+        dW2 += self.reg * W2
+        dx1, dW1, db1 = affine_relu_backward(da,a_cache)
+        #adding w1 regularization derivative
+        dW1 += self.reg * W1
+        #set gradient
+        grads['W2'] = dW2
+        grads['b2'] = db2
+        grads['W1'] = dW1
+        grads['b1'] = db1
         ############################################################################
         # TODO: Implement the backward pass for the two-layer net. Store the loss  #
         # in the loss variable and gradients in the grads dictionary. Compute data #
