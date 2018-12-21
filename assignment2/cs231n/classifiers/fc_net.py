@@ -1,10 +1,50 @@
 from builtins import range
 from builtins import object
 import numpy as np
-
+from enum import Enum
 from cs231n.layers import *
 from cs231n.layer_utils import *
 
+class Location(Enum):
+    HIDDEN_START = 1
+    HIDDEN_MIDDLE = 2
+    HIDDEN_END = 3
+    
+class Layer(object):
+    def __init__(self,Location,w,b,name):
+        self.Location = Location
+        self.name = name
+        self.W = w
+        self.B = b
+        self.cache_out = None
+    def get_regs(self,reg):
+        return 0.5*reg * np.sum(self.W*self.W)
+
+    def compute_back(self,d_prodact):
+        if(self.Location == Location.HIDDEN_END):
+            dh, dw, db = affine_backward(d_prodact, self.cache_out)
+        elif(self.Location == Location.HIDDEN_MIDDLE):
+            dh, dw, db = affine_relu_backward(d_prodact, self.cache_out)
+        else:
+            return
+       
+        return dh, dw, db 
+    
+    def compute_foward(self,x):
+        if(self.Location == Location.HIDDEN_END):
+            out, cache_out = affine_forward(x, self.W, self.B)
+        elif(self.Location == Location.HIDDEN_MIDDLE):
+            out, cache_out = affine_relu_forward(x, self.W, self.B)
+        else:
+            print("this is the start point")
+            return
+        
+        self.cache_out = cache_out
+        return out
+    
+    def astype(self,data_type):
+        self.W =  self.W.astype(data_type)
+        self.B =  self.B.astype(data_type)
 
 class TwoLayerNet(object):
     """
@@ -83,7 +123,7 @@ class TwoLayerNet(object):
         W2, b2 = self.params['W2'], self.params['b2']
         X = X.reshape(X.shape[0], self.D)
         a, a_cache = affine_relu_forward(X,W1,b1)
-        scores, cache_scores  = affine_relu_forward(a,W2,b2)
+        scores, cache_scores  = affine_forward(a,W2,b2)
         ############################################################################
         # TODO: Implement the forward pass for the two-layer net, computing the    #
         # class scores for X and storing them in the scores variable.              #
@@ -103,7 +143,7 @@ class TwoLayerNet(object):
         reg_loss = self.reg*np.sum(W1*W1) + self.reg*np.sum(W2*W2)
         loss = data_loss + reg_loss
         
-        da, dW2, db2 = affine_relu_backward(dscore,cache_scores)
+        da, dW2, db2 = affine_backward(dscore,cache_scores)
         #adding w2 regularization derivative
         dW2 += self.reg * W2
         dx1, dW1, db1 = affine_relu_backward(da,a_cache)
@@ -177,7 +217,24 @@ class FullyConnectedNet(object):
         self.num_layers = 1 + len(hidden_dims)
         self.dtype = dtype
         self.params = {}
-
+        self.layers = {}
+        self.L = len(hidden_dims) + 1
+        self.N = input_dim
+        self.C = num_classes
+        
+        dims = [self.N] + hidden_dims
+        for i in range(len(dims)-1):
+            w_middle =  weight_scale * np.random.randn(dims[i], dims[i + 1])
+            b_middle = np.zeros(dims[i + 1])
+            self.params['W' + str(i + 1)]=w_middle
+            self.params['b' + str(i + 1)]=b_middle
+            self.layers['layer' + str(i+1)] = Layer(Location.HIDDEN_MIDDLE,w_middle,b_middle,str(i+1))
+            
+        w_end =  weight_scale * np.random.randn(dims[-1], self.C)
+        b_end = np.zeros(self.C)
+        self.layers['layer' + str(len(dims))] =Layer(Location.HIDDEN_END,w_end,b_end,str(len(dims))) 
+        self.params['W' + str(len(dims))]=w_end
+        self.params['b' + str(len(dims))]=b_end
         ############################################################################
         # TODO: Initialize the parameters of the network, storing all values in    #
         # the self.params dictionary. Store weights and biases for the first layer #
@@ -215,9 +272,8 @@ class FullyConnectedNet(object):
 
         # Cast all parameters to the correct datatype
         for k, v in self.params.items():
-            self.params[k] = v.astype(dtype)
-
-
+            v.astype(dtype)
+    
     def loss(self, X, y=None):
         """
         Compute loss and gradient for the fully-connected net.
@@ -234,46 +290,40 @@ class FullyConnectedNet(object):
         if self.use_batchnorm:
             for bn_param in self.bn_params:
                 bn_param['mode'] = mode
+    
+        x_in = X.reshape(X.shape[0], np.prod(X.shape[1:]))
+        for i in range(self.L):
+            x_in =  self.layers['layer'+str(i + 1)].compute_foward(x_in)
+        scores = x_in
 
-        scores = None
-        ############################################################################
-        # TODO: Implement the forward pass for the fully-connected net, computing  #
-        # the class scores for X and storing them in the scores variable.          #
-        #                                                                          #
-        # When using dropout, you'll need to pass self.dropout_param to each       #
-        # dropout forward pass.                                                    #
-        #                                                                          #
-        # When using batch normalization, you'll need to pass self.bn_params[0] to #
-        # the forward pass for the first batch normalization layer, pass           #
-        # self.bn_params[1] to the forward pass for the second batch normalization #
-        # layer, etc.                                                              #
-        ############################################################################
-        pass
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
 
         # If test mode return early
         if mode == 'test':
             return scores
 
         loss, grads = 0.0, {}
-        ############################################################################
-        # TODO: Implement the backward pass for the fully-connected net. Store the #
-        # loss in the loss variable and gradients in the grads dictionary. Compute #
-        # data loss using softmax, and make sure that grads[k] holds the gradients #
-        # for self.params[k]. Don't forget to add L2 regularization!               #
-        #                                                                          #
-        # When using batch normalization, you don't need to regularize the scale   #
-        # and shift parameters.                                                    #
-        #                                                                          #
-        # NOTE: To ensure that your implementation matches ours and you pass the   #
-        # automated tests, make sure that your L2 regularization includes a factor #
-        # of 0.5 to simplify the expression for the gradient.                      #
-        ############################################################################
-        pass
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
-
+        data_loss ,dscores = softmax_loss(scores,y)
+        reg_loss = 0
+        
+        for i in range(self.L):
+            reg_loss+=self.layers['layer'+str(i + 1)].get_regs(self.reg) 
+        loss = data_loss + reg_loss
+        hidden = {}
+        d_out = dscores
+        hidden['dh' + str(self.L)] = dscores
+        for i in range(self.L)[::-1]:
+            idx = i + 1
+            dh = hidden['dh' + str(idx)]
+            layer = self.layers['layer'+str(i + 1)]
+            dh, dw, db = layer.compute_back(dh)
+            hidden['dh' + str(idx - 1)] = dh
+            hidden['dW' + str(idx)] = dw
+            hidden['db' + str(idx)] = db
+ 
+            
+        for i in range(self.L):
+            idx = i + 1
+            layer = self.layers['layer'+str(idx)]
+            grads['W'+str(idx)] = layer.W + hidden['dW' + str(idx)] + self.reg * self.params['W'+str(idx)]
+            grads['b'+str(idx)] = layer.B + hidden['db' + str(idx)] + self.reg * self.params['b'+str(idx)]
         return loss, grads
