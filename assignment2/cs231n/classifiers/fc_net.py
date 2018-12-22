@@ -134,15 +134,15 @@ class TwoLayerNet(object):
         loss, grads = 0, {}
         
         data_loss ,dscore = softmax_loss(scores,y)
-        reg_loss = self.reg*np.sum(W1*W1) + self.reg*np.sum(W2*W2)
+        reg_loss =self.reg*np.sum(W1*W1) + self.reg*np.sum(W2*W2)
         loss = data_loss + reg_loss
         
         da, dW2, db2 = affine_backward(dscore,cache_scores)
         #adding w2 regularization derivative
-        dW2 += self.reg * W2
+        dW2 += 2*self.reg * W2
         dx1, dW1, db1 = affine_relu_backward(da,a_cache)
         #adding w1 regularization derivative
-        dW1 += self.reg * W1
+        dW1 += 2*self.reg * W1
         #set gradient
         grads['W2'] = dW2
         grads['b2'] = db2
