@@ -11,14 +11,12 @@ class Location(Enum):
     HIDDEN_END = 3
     
 class Layer(object):
-    def __init__(self,Location,w,b,name):
+    def __init__(self,Location,name):
         self.Location = Location
         self.name = name
-        self.W = w
-        self.B = b
         self.cache_out = None
-    def get_regs(self,reg):
-        return 0.5*reg * np.sum(self.W*self.W)
+    def get_regs(self,reg,w):
+        return 0.5*reg * np.sum(w*w)
 
     def compute_back(self,d_prodact):
         if(self.Location == Location.HIDDEN_END):
@@ -30,21 +28,17 @@ class Layer(object):
        
         return da, dw, db 
     
-    def compute_foward(self,x):
+    def compute_foward(self,x,w,b):
         if(self.Location == Location.HIDDEN_END):
-            out, cache_out = affine_forward(x, self.W, self.B)
+            out, cache_out = affine_forward(x, w, b)
         elif(self.Location == Location.HIDDEN_MIDDLE):
-            out, cache_out = affine_relu_forward(x, self.W, self.B)
+            out, cache_out = affine_relu_forward(x, w, b)
         else:
             print("this is the start point")
             return
         
         self.cache_out = cache_out
         return out
-    
-    def astype(self,data_type):
-        self.W =  self.W.astype(data_type)
-        self.B =  self.B.astype(data_type)
 
 class TwoLayerNet(object):
     """
@@ -228,11 +222,11 @@ class FullyConnectedNet(object):
             b_middle = np.zeros(dims[i + 1])
             self.params['W' + str(i + 1)]=w_middle
             self.params['b' + str(i + 1)]=b_middle
-            self.layers['layer' + str(i+1)] = Layer(Location.HIDDEN_MIDDLE,w_middle,b_middle,str(i+1))
+            self.layers['layer' + str(i+1)] = Layer(Location.HIDDEN_MIDDLE,str(i+1))
             
         w_end =  weight_scale * np.random.randn(dims[-1], self.C)
         b_end = np.zeros(self.C)
-        self.layers['layer' + str(len(dims))] =Layer(Location.HIDDEN_END,w_end,b_end,str(len(dims))) 
+        self.layers['layer' + str(len(dims))] =Layer(Location.HIDDEN_END,str(len(dims))) 
         self.params['W' + str(len(dims))]=w_end
         self.params['b' + str(len(dims))]=b_end
         ############################################################################
@@ -272,7 +266,7 @@ class FullyConnectedNet(object):
 
         # Cast all parameters to the correct datatype
         for k, v in self.params.items():
-            v.astype(dtype)
+            self.params[k] = v.astype(dtype)
     
     def loss(self, X, y=None):
         """
@@ -293,7 +287,10 @@ class FullyConnectedNet(object):
     
         x_in = X.reshape(X.shape[0], np.prod(X.shape[1:]))
         for i in range(self.L):
-            x_in =  self.layers['layer'+str(i + 1)].compute_foward(x_in)
+            idx = str(i + 1)
+            w = self.params['W'+idx]
+            b = self.params['b'+str(idx)]
+            x_in =  self.layers['layer'+idx].compute_foward(x_in,w,b)
         scores = x_in
 
 
@@ -306,7 +303,9 @@ class FullyConnectedNet(object):
         reg_loss = 0
         
         for i in range(self.L):
-            reg_loss+=self.layers['layer'+str(i + 1)].get_regs(self.reg) 
+            idx = str(i + 1)
+            w = self.params['W'+idx]
+            reg_loss+=self.layers['layer'+idx].get_regs(self.reg,w) 
         loss = data_loss + reg_loss
         hidden = {}
         d_out = dscores
@@ -314,7 +313,7 @@ class FullyConnectedNet(object):
         for i in range(self.L)[::-1]:
             idx = i + 1
             da = hidden['da' + str(idx)]
-            layer = self.layers['layer'+str(i + 1)]
+            layer = self.layers['layer'+str(idx)]
             da, dw, db = layer.compute_back(da)
             hidden['da' + str(idx - 1)] = da
             hidden['dW' + str(idx)] = dw
