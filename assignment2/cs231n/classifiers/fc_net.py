@@ -22,13 +22,13 @@ class Layer(object):
 
     def compute_back(self,d_prodact):
         if(self.Location == Location.HIDDEN_END):
-            dh, dw, db = affine_backward(d_prodact, self.cache_out)
+            da, dw, db = affine_backward(d_prodact, self.cache_out)
         elif(self.Location == Location.HIDDEN_MIDDLE):
-            dh, dw, db = affine_relu_backward(d_prodact, self.cache_out)
+            da, dw, db = affine_relu_backward(d_prodact, self.cache_out)
         else:
             return
        
-        return dh, dw, db 
+        return da, dw, db 
     
     def compute_foward(self,x):
         if(self.Location == Location.HIDDEN_END):
@@ -310,13 +310,13 @@ class FullyConnectedNet(object):
         loss = data_loss + reg_loss
         hidden = {}
         d_out = dscores
-        hidden['dh' + str(self.L)] = dscores
+        hidden['da' + str(self.L)] = dscores
         for i in range(self.L)[::-1]:
             idx = i + 1
-            dh = hidden['dh' + str(idx)]
+            da = hidden['da' + str(idx)]
             layer = self.layers['layer'+str(i + 1)]
-            dh, dw, db = layer.compute_back(dh)
-            hidden['dh' + str(idx - 1)] = dh
+            da, dw, db = layer.compute_back(da)
+            hidden['da' + str(idx - 1)] = da
             hidden['dW' + str(idx)] = dw
             hidden['db' + str(idx)] = db
  
@@ -324,6 +324,6 @@ class FullyConnectedNet(object):
         for i in range(self.L):
             idx = i + 1
             layer = self.layers['layer'+str(idx)]
-            grads['W'+str(idx)] = layer.W + hidden['dW' + str(idx)] + self.reg * self.params['W'+str(idx)]
-            grads['b'+str(idx)] = layer.B + hidden['db' + str(idx)] + self.reg * self.params['b'+str(idx)]
+            grads['W'+str(idx)] =  hidden['dW' + str(idx)] + self.reg * self.params['W'+str(idx)]
+            grads['b'+str(idx)] =  hidden['db' + str(idx)] + self.reg * self.params['b'+str(idx)]
         return loss, grads
