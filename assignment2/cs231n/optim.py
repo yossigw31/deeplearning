@@ -95,8 +95,17 @@ def rmsprop(x, dx, config=None):
     config.setdefault('decay_rate', 0.99)
     config.setdefault('epsilon', 1e-8)
     config.setdefault('cache', np.zeros_like(x))
-
-    next_x = None
+    
+    grad_squared =  config.get('cache')
+    learning_rate = config.get('learning_rate')
+    decay_rate = config.get('decay_rate')
+    epsilon = config.get('epsilon')
+    
+    grad_squared  = decay_rate * grad_squared + (1-decay_rate)*dx*dx
+    x-= learning_rate *dx/np.sqrt(grad_squared+epsilon)
+    
+    next_x = x
+    config['cache'] = grad_squared
     ###########################################################################
     # TODO: Implement the RMSprop update formula, storing the next value of x #
     # in the next_x variable. Don't forget to update cache value stored in    #
@@ -132,8 +141,28 @@ def adam(x, dx, config=None):
     config.setdefault('m', np.zeros_like(x))
     config.setdefault('v', np.zeros_like(x))
     config.setdefault('t', 1)
+    
+    learning_rate =  config.get('learning_rate')
+    beta1 =  config.get('beta1')
+    beta2 =  config.get('beta2')    
+    epsilon =  config.get('epsilon')
+    
+    m =  config.get('m')
+    v =  config.get('v')
+    t =  config.get('t')
+    t = t+1
+    
+    m = beta1*m + (1-beta1)*dx
+    v = beta2*v + (1-beta2)*dx**2
+    
+    m_unbias =  m/(1-(beta1**t))
+    v_unbias =  v/(1-(beta1**t))
 
-    next_x = None
+    next_x = x - learning_rate*m_unbias/(np.sqrt(v_unbias+epsilon))
+    
+    config['m'] = m
+    config['v'] = v
+    config['t'] = t
     ###########################################################################
     # TODO: Implement the Adam update formula, storing the next value of x in #
     # the next_x variable. Don't forget to update the m, v, and t variables   #
